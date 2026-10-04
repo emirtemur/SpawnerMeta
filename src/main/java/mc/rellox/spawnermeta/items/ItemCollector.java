@@ -1,11 +1,10 @@
 package mc.rellox.spawnermeta.items;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 import org.bukkit.Sound;
@@ -25,8 +24,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 
 public class ItemCollector implements Listener {
 	
-	private static final Map<UUID, ItemCollector> ITEMS = new HashMap<>();
-	private static boolean running;
+	private static final Map<UUID, ItemCollector> ITEMS = new ConcurrentHashMap<>();
 	
 	public static void add(Player player, ItemStack item) {
 		if(Settings.settings.breaking_drop_on_ground == true) return;
@@ -48,18 +46,7 @@ public class ItemCollector implements Listener {
 			return;
 		}
 		drop.remind();
-		run();
-	}
-	
-	@SuppressWarnings("deprecation")
-	private static void run() {
-		if(running == true) return;
-		running = true;
-		SpawnerMeta.scheduler().runTimer(task -> {
-			Iterator<ItemCollector> it = ITEMS.values().iterator();
-			while(it.hasNext() == true) if(it.next().tick() == false) it.remove();
-			if((running = !ITEMS.isEmpty()) == false) task.cancel();
-		}, 1, 1);
+		drop.start();
 	}
 	
 	private static void send(Player player, int ticks) {
@@ -85,6 +72,7 @@ public class ItemCollector implements Listener {
 	private final List<ItemStack> items;
 	
 	private int ticks;
+	private boolean scheduled;
 	
 	public ItemCollector(Player player) {
 		this.player = player;
@@ -99,6 +87,23 @@ public class ItemCollector implements Listener {
 		}
 		if(ticks == Settings.settings.items_remind_ticks) remind();
 		return true;
+	}
+
+	private void start() {
+		if(scheduled) return;
+		scheduled = true;
+		scheduleNext();
+	}
+
+	private void scheduleNext() {
+		SpawnerMeta.scheduler().runAtEntityLater(player, () -> {
+			if(ITEMS.get(player.getUniqueId()) != this) return;
+			if(!player.isOnline() || !tick()) {
+				ITEMS.remove(player.getUniqueId(), this);
+				return;
+			}
+			scheduleNext();
+		}, 1);
 	}
 	
 	private void remind() {

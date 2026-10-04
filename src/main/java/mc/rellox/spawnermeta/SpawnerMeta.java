@@ -11,6 +11,7 @@ import mc.rellox.spawnermeta.events.EventListeners;
 import mc.rellox.spawnermeta.hook.HookRegistry;
 import mc.rellox.spawnermeta.shop.ShopRegistry;
 import mc.rellox.spawnermeta.spawner.generator.GeneratorRegistry;
+import mc.rellox.spawnermeta.spawner.generator.PlayerSnapshots;
 import mc.rellox.spawnermeta.spawner.generator.SpawningManager;
 import mc.rellox.spawnermeta.text.Text;
 import mc.rellox.spawnermeta.utility.DataManager;
@@ -72,6 +73,7 @@ public final class SpawnerMeta extends JavaPlugin {
 			DataManager.initialize();
 			ShopRegistry.initialize();
 			EventListeners.initialize();
+			PlayerSnapshots.initialize();
 			GeneratorRegistry.initialize();
 			SpawningManager.initialize();
 			LocationRegistry.initialize();

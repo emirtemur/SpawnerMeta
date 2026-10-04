@@ -1,9 +1,9 @@
 package mc.rellox.spawnermeta.spawner.generator;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 import org.bukkit.Bukkit;
@@ -29,7 +29,7 @@ import mc.rellox.spawnermeta.utility.reflect.Reflect.RF;
 
 public final class GeneratorRegistry implements Listener {
 
-    private static final Map<World, SpawnerWorld> SPAWNERS = new HashMap<>();
+    private static final Map<World, SpawnerWorld> SPAWNERS = new ConcurrentHashMap<>();
 
     private static WrappedTask active_task;
     private static WrappedTask offline_task;
@@ -116,9 +116,7 @@ public final class GeneratorRegistry implements Listener {
 
     private static SpawnerWorld get(World world) {
         if(Settings.inactive(world)) return null;
-        SpawnerWorld sw = SPAWNERS.get(world);
-        if(sw == null) SPAWNERS.put(world, sw = new SpawnerWorld(world));
-        return sw;
+        return SPAWNERS.computeIfAbsent(world, SpawnerWorld::new);
     }
 
     public static void put(Block block) {

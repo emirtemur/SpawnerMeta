@@ -52,9 +52,6 @@ public final class DataManager {
 	
 	private static NamespacedKey key_spawned;
 	
-	private static Block last;
-	private static CreatureSpawner spawner;
-	
 	public static void initialize() {
 		key_empty = new NamespacedKey(SpawnerMeta.instance(), "empty");
 		key_upgrades = new NamespacedKey(SpawnerMeta.instance(), "upgrades");
@@ -658,10 +655,8 @@ public final class DataManager {
 	
 	private static CreatureSpawner cast(Block block) {
 		try {
-			if(block.equals(last)) return spawner;
 			if(PaperLib.getBlockState(block, false).getState() instanceof CreatureSpawner cs) {
-				last = block;
-				return spawner = cs;
+				return cs;
 			}
 		} catch (Exception e) {
 			RF.debug(e);

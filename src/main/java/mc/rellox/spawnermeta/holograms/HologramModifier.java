@@ -1,5 +1,6 @@
 package mc.rellox.spawnermeta.holograms;
 
+import mc.rellox.spawnermeta.SpawnerMeta;
 import mc.rellox.spawnermeta.version.IVersion;
 import mc.rellox.spawnermeta.version.Version;
 import org.bukkit.Location;
@@ -18,16 +19,20 @@ public record HologramModifier(IVersion version) {
 	}
 	
 	public void spawn(Player player, Object entity) {
-		version.send(player, version.spawn(entity), version.meta(entity));
+		Object spawn = version.spawn(entity), meta = version.meta(entity);
+		SpawnerMeta.scheduler().runAtEntity(player, task -> version.send(player, spawn, meta));
 	}
 
 	public void destroy(Player player, Object entity) {
-		version.send(player, version.destroy(entity));
+		Object destroy = version.destroy(entity);
+		SpawnerMeta.scheduler().runAtEntity(player, task -> version.send(player, destroy));
 	}
 
 	public void update(Set<Player> players, Object entity, String name) {
 		version.name(entity, name);
-		version.send(players, version.meta(entity));
+		Object meta = version.meta(entity);
+		for (Player player : players)
+			SpawnerMeta.scheduler().runAtEntity(player, task -> version.send(player, meta));
 	}
 
 }

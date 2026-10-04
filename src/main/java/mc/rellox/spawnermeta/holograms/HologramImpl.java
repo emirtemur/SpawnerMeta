@@ -4,6 +4,7 @@ import mc.rellox.spawnermeta.api.hologram.IHologram;
 import mc.rellox.spawnermeta.api.region.IBox;
 import mc.rellox.spawnermeta.api.spawner.IGenerator;
 import mc.rellox.spawnermeta.configuration.Settings;
+import mc.rellox.spawnermeta.spawner.generator.PlayerSnapshots;
 import mc.rellox.spawnermeta.text.content.Content;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -43,11 +44,12 @@ public abstract class HologramImpl implements IHologram {
 	
 	@Override
 	public void update() {
-		List<Player> list = generator.world().getPlayers();
+		List<Player> list = PlayerSnapshots.in(generator.world(), box);
 		for(Player player : list) {
-			if(box.in(player)) {
-				if(players.add(player)) show(player);
-			} else if(players.remove(player)) hide(player);
+			if(players.add(player)) show(player);
+		}
+		for(Player player : List.copyOf(players)) {
+			if(!list.contains(player) && players.remove(player)) hide(player);
 		}
 	}
 	

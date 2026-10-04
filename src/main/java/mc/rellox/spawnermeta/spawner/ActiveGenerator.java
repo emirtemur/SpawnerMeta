@@ -18,6 +18,7 @@ import mc.rellox.spawnermeta.configuration.location.LocationRegistry;
 import mc.rellox.spawnermeta.events.EventRegistry;
 import mc.rellox.spawnermeta.hook.HookRegistry;
 import mc.rellox.spawnermeta.spawner.generator.SpawningManager;
+import mc.rellox.spawnermeta.spawner.generator.PlayerSnapshots;
 import mc.rellox.spawnermeta.spawner.requirement.ActiveFinder;
 import mc.rellox.spawnermeta.spawner.type.SpawnerType;
 import mc.rellox.spawnermeta.utility.DataManager;
@@ -265,7 +266,7 @@ public class ActiveGenerator implements IGenerator {
 		if(!cache.enabled() || cache.type() == SpawnerType.EMPTY) return false;
 		if(checking != 0) return rotating;
 		
-		boolean rotate = box.any(spawner.world().getPlayers());
+		boolean rotate = PlayerSnapshots.any(spawner.world(), box);
 		
 		if(Settings.settings.redstone_power_disable_with_power
 				&& rotate)

@@ -9,6 +9,7 @@ import io.github.rvskele.paperlib.PaperLib;
 import mc.rellox.spawnermeta.SpawnerMeta;
 import mc.rellox.spawnermeta.utility.Utility;
 import org.bukkit.Chunk;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -25,7 +26,6 @@ public class SpawnerWorld {
 
 	public final World world;
 	protected final Map<Pos, IGenerator> spawners;
-	private final List<IGenerator> queue;
 
 	// Chunk-based spawners lookups
 	private final Map<Long, Set<Pos>> byChunk;
@@ -33,7 +33,6 @@ public class SpawnerWorld {
 	public SpawnerWorld(World world) {
 		this.world = world;
 		this.spawners = Collections.synchronizedMap(new HashMap<>());
-		this.queue = Collections.synchronizedList(new LinkedList<>());
         this.byChunk = new ConcurrentHashMap<>();
 	}
 
@@ -43,7 +42,12 @@ public class SpawnerWorld {
 
 	public void load() {
 		for (Chunk chunk : world.getLoadedChunks()) {
-			load(chunk);
+			if (SpawnerMeta.foliaLib().isFolia()) {
+				Location location = new Location(world, chunk.getX() << 4, 0, chunk.getZ() << 4);
+				SpawnerMeta.scheduler().runAtLocation(location, task -> {
+					if (chunk.isLoaded()) load(chunk);
+				});
+			} else load(chunk);
 		}
 	}
 
@@ -54,8 +58,8 @@ public class SpawnerWorld {
 				Block block = state.getBlock();
 				if (!Settings.settings.ignored(block)) {
 					ISpawner spawner = ISpawner.of(block);
-					IGenerator generator = new ActiveGenerator(spawner);
-					queue.add(generator);
+					Pos pos = Pos.of(block);
+					if (!spawners.containsKey(pos)) put(new ActiveGenerator(spawner));
 				}
 			}
 		}
@@ -76,9 +80,7 @@ public class SpawnerWorld {
 	}
 
 	public void clear() {
-		for (IGenerator generator : spawners.values()) {
-			generator.clear();
-		}
+		for (IGenerator generator : snapshot()) onGenerator(generator, generator::clear);
 		spawners.clear();
 		byChunk.clear();
 	}
@@ -88,58 +90,53 @@ public class SpawnerWorld {
 	}
 
 	public void update() {
-		for (IGenerator generator : spawners.values()) {
-			generator.update();
-		}
+		for (IGenerator generator : snapshot()) onGenerator(generator, generator::update);
 	}
 
 	public void control() {
-		for (IGenerator generator : spawners.values()) {
-			generator.control();
-		}
+		for (IGenerator generator : snapshot()) onGenerator(generator, generator::control);
 	}
 
 	public void tick() {
-		if (!queue.isEmpty()) {
-			for (IGenerator generator : queue) {
-				put(generator);
-			}
-			queue.clear();
-		}
 		if (SpawnerMeta.foliaLib().isFolia()) {
-			for (IGenerator generator : spawners.values()) {
+			for (IGenerator generator : snapshot()) {
 				generator.tickFolia();
 			}
 		} else {
-			for (IGenerator generator : spawners.values()) {
+			for (IGenerator generator : snapshot()) {
 				generator.tick();
 			}
 		}
 	}
 
 	public void reduce() {
-		List<Pos> toRemove = new ArrayList<>();
-
-		Map<Pos, IGenerator> spawnersCopy;
-		synchronized (spawners) {
-			spawnersCopy = new HashMap<>(spawners);
-		}
-
-		for (Map.Entry<Pos, IGenerator> entry : spawnersCopy.entrySet()) {
+		for (Map.Entry<Pos, IGenerator> entry : snapshotEntries().entrySet()) {
 			Pos pos = entry.getKey();
 			IGenerator generator = entry.getValue();
-			if (!generator.active() || !generator.present()) {
+			onGenerator(generator, () -> {
+				if (generator.active() && generator.present()) return;
+				if (!spawners.remove(pos, generator)) return;
 				generator.clear();
-				toRemove.add(pos);
 				removeFromChunk(pos);
-			}
+			});
 		}
+	}
 
+	private Map<Pos, IGenerator> snapshotEntries() {
 		synchronized (spawners) {
-			for (Pos pos : toRemove) {
-				spawners.remove(pos);
-			}
+			return new HashMap<>(spawners);
 		}
+	}
+
+	private List<IGenerator> snapshot() {
+		return new ArrayList<>(snapshotEntries().values());
+	}
+
+	private void onGenerator(IGenerator generator, Runnable action) {
+		if (!SpawnerMeta.foliaLib().isFolia()
+				|| SpawnerMeta.scheduler().isOwnedByCurrentRegion(generator.block())) {
+			action.run();
+		} else SpawnerMeta.scheduler().runAtLocation(generator.block().getLocation(), task -> action.run());
 	}
 
 	public int remove(boolean fully, Predicate<IGenerator> filter) {
@@ -187,7 +184,10 @@ public class SpawnerWorld {
 	public IGenerator get(Block block) {
 		IGenerator generator = spawners.get(Pos.of(block));
 		if (generator == null) {
-			if (block.getType() == Material.SPAWNER) put(block);
+			if (block.getType() == Material.SPAWNER) {
+				put(block);
+				generator = spawners.get(Pos.of(block));
+			}
 		} else if (!generator.active()) return null;
 		return generator;
 	}

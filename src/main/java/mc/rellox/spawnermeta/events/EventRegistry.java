@@ -46,13 +46,15 @@ import org.bukkit.util.Vector;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 public final class EventRegistry {
 	
 	private static long time, chunk;
 	
-	private static Block verify;
+	private static final Map<UUID, Block> VERIFY = new ConcurrentHashMap<>();
 	
 	public static APIInstance getAPI() {
 		return SpawnerMeta.instance().getAPI();
@@ -278,12 +280,13 @@ public final class EventRegistry {
 		}
 		if(Settings.settings.empty_verify_removing) {
 			Block block = generator.block();
-			verify = block;
+			UUID id = player.getUniqueId();
+			VERIFY.put(id, block);
 			SpawnerMeta.scheduler().runAtLocationLater(block.getLocation(), () -> {
-				if(block.equals(verify)) {
-					verify = null;
-					player.spawnParticle(Utility.particle_redstone, Utility.center(block).add(0, 0.52, 0), 5, 0.1, 0.1, 0.1, 0,
-							new DustOptions(Color.MAROON, 2f));
+				if(VERIFY.remove(id, block)) {
+					Location at = Utility.center(block).add(0, 0.52, 0);
+					SpawnerMeta.scheduler().runAtEntity(player, task -> player.spawnParticle(Utility.particle_redstone,
+							at, 5, 0.1, 0.1, 0.1, 0, new DustOptions(Color.MAROON, 2f)));
 				}
 			}, 20);
 			m.send(Language.list("Spawners.empty.verify-removing.first"));
@@ -343,12 +346,13 @@ public final class EventRegistry {
 		
 		if(Settings.settings.empty_verify_removing) {
 			Block block = generator.block();
-			verify = block;
+			UUID id = player.getUniqueId();
+			VERIFY.put(id, block);
 			SpawnerMeta.scheduler().runAtLocationLater(block.getLocation(), () -> {
-				if(block.equals(verify)) {
-					verify = null;
-					player.spawnParticle(Utility.particle_redstone, Utility.center(block).add(0, 0.52, 0), 5, 0.1, 0.1, 0.1, 0,
-							new DustOptions(Color.MAROON, 2f));
+				if(VERIFY.remove(id, block)) {
+					Location at = Utility.center(block).add(0, 0.52, 0);
+					SpawnerMeta.scheduler().runAtEntity(player, task -> player.spawnParticle(Utility.particle_redstone,
+							at, 5, 0.1, 0.1, 0.1, 0, new DustOptions(Color.MAROON, 2f)));
 				}
 			}, 20);
 			m.send(Language.list("Spawners.empty.verify-removing.first"));
@@ -429,7 +433,7 @@ public final class EventRegistry {
 		boolean holding = !Utility.nulled(player.getInventory().getItemInMainHand());
 		if(!holding && Utility.op(player)) event.setCancelled(true);
 		
-		if(verify == null) {
+		if(!block.equals(VERIFY.get(player.getUniqueId()))) {
 			m.send(Language.list("Spawners.empty.verify-removing.try-again"));
 			player.playSound(player.getEyeLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 2f, 1f);
 			return;
@@ -647,7 +651,7 @@ public final class EventRegistry {
 		
 		generator.refresh();
 		
-		if(generator.block().equals(verify)) verify = null;
+		VERIFY.remove(player.getUniqueId(), generator.block());
 	}
 
 	public static void breaking(BlockBreakEvent event, IGenerator generator) {

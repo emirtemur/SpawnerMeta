@@ -16,6 +16,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 public final class LocationRegistry implements Listener {
@@ -28,7 +29,7 @@ public final class LocationRegistry implements Listener {
 	private static final Pattern uuid_validation =
 			Pattern.compile("[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}");
 	
-	private static final Map<UUID, IPlayerData> LOCATIONS = new HashMap<>();
+	private static final Map<UUID, IPlayerData> LOCATIONS = new ConcurrentHashMap<>();
 	
 	static final List<IData<?>> EXTERNAL_DATA = new ArrayList<>();
 	
@@ -178,12 +179,11 @@ public final class LocationRegistry implements Listener {
 	 */
 	
 	public static IPlayerData get(UUID id) {
-		IPlayerData il = LOCATIONS.get(id);
-		if(il == null) {
+		IPlayerData il = LOCATIONS.computeIfAbsent(id, key -> {
 			if(Bukkit.getOfflinePlayer(id).getName() == null)
 				throw new IllegalArgumentException("No player with this UUID (" + id.toString() + ") has played before");
-			LOCATIONS.put(id, il = new LocationFile(id));
-		}
+			return new LocationFile(key);
+		});
 		il.use();
 		il.load();
 		return il;
