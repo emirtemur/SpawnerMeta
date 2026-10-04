@@ -70,9 +70,9 @@ public final class ShopRegistry {
 	}
 	
 	private static void loadValues() {
-		first = file.getInt("Settings.Buy.Amount.First");
-		second = file.getInt("Settings.Buy.Amount.Second");
-		third = file.getInt("Settings.Buy.Amount.Third");
+		first = Math.max(1, file.getInt("Settings.Buy.Amount.First"));
+		second = Math.max(1, file.getInt("Settings.Buy.Amount.Second"));
+		third = Math.max(1, file.getInt("Settings.Buy.Amount.Third"));
 		buy_next = RF.enumerate(Material.class, file.getString("Settings.Buy.Items.Next"), Material.SPECTRAL_ARROW);
 		buy_prev = RF.enumerate(Material.class, file.getString("Settings.Buy.Items.Previous"), Material.SPECTRAL_ARROW);
 		buy_page = RF.enumerate(Material.class, file.getString("Settings.Buy.Items.Page"), Material.PAPER);

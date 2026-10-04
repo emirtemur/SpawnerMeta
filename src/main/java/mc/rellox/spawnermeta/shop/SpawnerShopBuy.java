@@ -31,7 +31,7 @@ public class SpawnerShopBuy implements Listener {
 		this.data = data;
 		this.bs = bs;
 		int l = data.length;
-		int i = l > r1 ? l / r0 + 1 : 1;
+		int i = l > r1 ? (l + r0 - 1) / r0 : 1;
 		this.vs = new Inventory[i];
 		for(i = 0; i < vs.length; i++) vs[i] = Bukkit.createInventory(null, r1, Language.get("Shop-buy.name",
 				"page_current", i + 1, "page_total", vs.length).text());
@@ -106,7 +106,7 @@ public class SpawnerShopBuy implements Listener {
 						ClickType click = event.getClick();
 						if(click == ClickType.SHIFT_LEFT) {
 							if(bs[2] == false) return;
-							sd.buy(player, 16);
+							sd.buy(player, ShopRegistry.third);
 						} else if(click == ClickType.SHIFT_RIGHT) {
 							if(bs[3] == false) return;
 							int b = Price.of(Group.shop, 0).balance(player);
@@ -115,10 +115,10 @@ public class SpawnerShopBuy implements Listener {
 							sd.buy(player, a);
 						} else if(click == ClickType.LEFT) {
 							if(bs[0] == false) return;
-							sd.buy(player, 1);
+							sd.buy(player, ShopRegistry.first);
 						} else if(click == ClickType.RIGHT) {
 							if(bs[1] == false) return;
-							sd.buy(player, 4);
+							sd.buy(player, ShopRegistry.second);
 						}
 					} else {
 						if(s == (v.getSize() - 9) && p > 0) open(player, p - 1);

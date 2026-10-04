@@ -20,7 +20,12 @@ import mc.rellox.spawnermeta.utility.Utility;
 public record BuyData(SpawnerType type, int value) {
 	
 	public void buy(Player player, int a) {
-		Price price = Price.of(Group.shop, value * a);
+		a = Math.min(a, 36 * 64);
+		long total = (long) value * a;
+		if(a <= 0 || total > Integer.MAX_VALUE) return;
+		List<ItemStack> items = DataManager.getSpawners(type, a, false, true);
+		if(items.isEmpty()) return;
+		Price price = Price.of(Group.shop, (int) total);
 		if(price.has(player) == false) {
 			player.sendMessage(Language.get("Prices.insufficient",
 					"insufficient", price.insufficient(), "price", price.requires(player)).text());
@@ -28,8 +33,7 @@ public record BuyData(SpawnerType type, int value) {
 			return;
 		}
 		price.remove(player);
-		ItemStack item = DataManager.getSpawners(type, a, false, true).get(0);
-		ItemMatcher.add(player, item);
+		items.forEach(item -> ItemMatcher.add(player, item));
 		player.sendMessage(Language.get("Shop-buy.purchase.success",
 				"amount", a, "type", type).text());
 		player.playSound(player.getEyeLocation(), Sound.BLOCK_NOTE_BLOCK_CHIME, 2f, 2f);
